@@ -1,0 +1,16 @@
+{
+  "name": "slack-mcp-node",
+  "version": "1.0.0",
+  "description": "Ultra-lightweight Slack MCP Server in Node.js",
+  "type": "module",
+  "main": "index.js",
+  "bin": {
+    "slack-mcp-node": "./index.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.1"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
