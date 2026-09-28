@@ -1,0 +1,31 @@
+README.md
+  s_31d76127c08df6::t_d41f0e4470ad95 1-75
+credentials.js
+  s_31d76127c08df6::t_216f39a429b0c0 1-282
+index.js
+  s_31d76127c08df6::t_e3210b97a31ca5 1-84
+package-lock.json
+  s_31d76127c08df6::t_57978924588e63 1-1208
+package.json
+  s_31d76127c08df6::t_9b2eba24be4cf2 1-16
+test-extract.js
+  s_31d76127c08df6::t_b40a00c37fbb88 1-226
+test.js
+  s_31d76127c08df6::t_a584c07ac22d6b 1-93
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "2403d500d1bfb5f3550f22eade2c1a18f6eed1a6",
+  "prompts": {},
+  "sessions": {
+    "s_31d76127c08df6": {
+      "agent_id": {
+        "tool": "gemini",
+        "id": "33160c7d-a0b1-4d5a-9d7b-5760fd6704bf",
+        "model": "gemini-3.5-flash"
+      },
+      "human_author": "DarioGdR <dario.garcia@pedidosya.com>"
+    }
+  }
+}
