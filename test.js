@@ -3,7 +3,7 @@ import assert from 'node:assert';
 import { executeTool, TOOLS_DEFINITIONS } from './tools.js';
 
 test('Tools Schema and Definition Validation', () => {
-  assert.equal(TOOLS_DEFINITIONS.length, 12, 'Should contain exactly 12 Slack tools after upgrade.');
+  assert.equal(TOOLS_DEFINITIONS.length, 13, 'Should contain exactly 13 Slack tools.');
   
   const getByNameTool = TOOLS_DEFINITIONS.find(t => t.name === 'get_channel_by_name');
   assert.ok(getByNameTool, 'Should contain get_channel_by_name tool.');
@@ -36,7 +36,7 @@ test('Mock executeTool - Name Resolution and URL Extraction', async () => {
         json: async () => ({
           ok: true,
           channels: [
-            { id: 'C0BHN4GBMD2', name: 'peya-platform-services-daimon', name_normalized: 'peya-platform-services-daimon' }
+            { id: 'C0BHN4GBMD2', name: 'engineering-general', name_normalized: 'engineering-general' }
           ]
         })
       };
@@ -55,7 +55,7 @@ test('Mock executeTool - Name Resolution and URL Extraction', async () => {
   try {
     // 1. Test get_channel_by_name tool
     const getByNameResult = await executeTool('get_channel_by_name', {
-      name: 'peya-platform-services-daimon'
+      name: 'engineering-general'
     }, dummyCredentials);
     
     assert.ok(getByNameResult.mocked);
@@ -67,7 +67,7 @@ test('Mock executeTool - Name Resolution and URL Extraction', async () => {
     
     // 2. Test conversations_history accepts plain channel name and resolves it
     const historyResult = await executeTool('conversations_history', {
-      channel: '#peya-platform-services-daimon',
+      channel: '#engineering-general',
       limit: 10
     }, dummyCredentials);
     
@@ -79,7 +79,7 @@ test('Mock executeTool - Name Resolution and URL Extraction', async () => {
 
     // 3. Test get_message_by_url extracts channel ID and ts correctly
     const linkResult = await executeTool('get_message_by_url', {
-      url: 'https://deliveryhero.slack.com/archives/C0BHN4GBMD2/p1786428589673259'
+      url: 'https://my-company.slack.com/archives/C0BHN4GBMD2/p1786428589673259'
     }, dummyCredentials);
     
     assert.ok(linkResult.mocked);

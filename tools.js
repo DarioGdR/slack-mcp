@@ -8,71 +8,71 @@
 export const TOOLS_DEFINITIONS = [
   {
     name: "search_messages",
-    description: "Buscar mensajes en canales de Slack.",
+    description: "Search messages across accessible Slack channels.",
     annotations: {
       readOnlyHint: true
     },
     inputSchema: {
       type: "object",
       properties: {
-        query: { type: "string", description: "Query de búsqueda (ej. 'error de base de datos')" },
-        count: { type: "number", description: "Cantidad de resultados a retornar (por defecto 20)" },
-        page: { type: "number", description: "Número de página a buscar" }
+        query: { type: "string", description: "Search query string (e.g. 'database error')" },
+        count: { type: "number", description: "Number of search results to return (default: 20)" },
+        page: { type: "number", description: "Page number to fetch" }
       },
       required: ["query"]
     }
   },
   {
     name: "search_all",
-    description: "Buscar tanto mensajes como archivos en Slack.",
+    description: "Search both messages and files across Slack.",
     annotations: {
       readOnlyHint: true
     },
     inputSchema: {
       type: "object",
       properties: {
-        query: { type: "string", description: "Query de búsqueda" },
-        count: { type: "number", description: "Cantidad de resultados a retornar (por defecto 20)" },
-        page: { type: "number", description: "Número de página a buscar" },
-        sort: { type: "string", description: "Campo de ordenamiento (ej. 'timestamp')" },
-        sort_dir: { type: "string", description: "Dirección de orden (ej. 'desc')" }
+        query: { type: "string", description: "Search query string" },
+        count: { type: "number", description: "Number of search results to return (default: 20)" },
+        page: { type: "number", description: "Page number to fetch" },
+        sort: { type: "string", description: "Sort field (e.g. 'timestamp')" },
+        sort_dir: { type: "string", description: "Sort direction (e.g. 'desc')" }
       },
       required: ["query"]
     }
   },
   {
     name: "users_list",
-    description: "Listar miembros del espacio de trabajo.",
+    description: "List members of the Slack workspace.",
     annotations: {
       readOnlyHint: true
     },
     inputSchema: {
       type: "object",
       properties: {
-        cursor: { type: "string", description: "Cursor para paginar" },
-        limit: { type: "number", description: "Límite de resultados (por defecto 100)" },
-        include_locale: { type: "boolean", description: "Si se debe incluir el locale del usuario" }
+        cursor: { type: "string", description: "Pagination cursor" },
+        limit: { type: "number", description: "Maximum number of results to return (default: 100)" },
+        include_locale: { type: "boolean", description: "Whether to include the user locale" }
       }
     }
   },
   {
     name: "users_info",
-    description: "Obtener detalles y perfil de un usuario específico de Slack.",
+    description: "Get details and profile for a specific Slack user.",
     annotations: {
       readOnlyHint: true
     },
     inputSchema: {
       type: "object",
       properties: {
-        user: { type: "string", description: "ID del usuario de Slack (ej. 'U123456')" },
-        include_locale: { type: "boolean", description: "Si se debe incluir el locale del usuario" }
+        user: { type: "string", description: "Slack user ID (e.g. 'U123456')" },
+        include_locale: { type: "boolean", description: "Whether to include the user locale" }
       },
       required: ["user"]
     }
   },
   {
     name: "get_users_channel_sections_list",
-    description: "Obtener las secciones personalizadas de la barra lateral del usuario actual de Slack.",
+    description: "Get custom sidebar channel sections for the authenticated user.",
     annotations: {
       readOnlyHint: true
     },
@@ -83,127 +83,127 @@ export const TOOLS_DEFINITIONS = [
   },
   {
     name: "conversations_history",
-    description: "Obtener el historial de mensajes de un canal de Slack (acepta ID de canal o nombre con/sin #).",
+    description: "Get message history from a Slack channel (accepts channel ID or name with or without #).",
     annotations: {
       readOnlyHint: true
     },
     inputSchema: {
       type: "object",
       properties: {
-        channel: { type: "string", description: "ID o nombre del canal (ej. 'C123456' o 'peya-platform-services-daimon')" },
-        limit: { type: "number", description: "Límite de mensajes a retornar (por defecto 100)" },
-        cursor: { type: "string", description: "Cursor para paginar" },
-        latest: { type: "string", description: "End timestamp para el filtro de tiempo" },
-        oldest: { type: "string", description: "Start timestamp para el filtro de tiempo" },
-        inclusive: { type: "boolean", description: "Si se deben incluir los límites de tiempo" }
+        channel: { type: "string", description: "Channel ID or name (e.g. 'C123456' or 'general')" },
+        limit: { type: "number", description: "Number of messages to return (default: 100)" },
+        cursor: { type: "string", description: "Pagination cursor" },
+        latest: { type: "string", description: "End timestamp for time range filter" },
+        oldest: { type: "string", description: "Start timestamp for time range filter" },
+        inclusive: { type: "boolean", description: "Whether to include boundary timestamps" }
       },
       required: ["channel"]
     }
   },
   {
     name: "conversations_list",
-    description: "Listar canales públicos y privados disponibles de Slack.",
+    description: "List available public and private Slack channels in the workspace.",
     annotations: {
       readOnlyHint: true
     },
     inputSchema: {
       type: "object",
       properties: {
-        exclude_archived: { type: "boolean", description: "Excluir canales archivados (por defecto true)" },
-        types: { type: "string", description: "Tipos de canales separados por coma (ej. 'public_channel,private_channel')" },
-        limit: { type: "number", description: "Límite de resultados (por defecto 100)" },
-        cursor: { type: "string", description: "Cursor para paginar" }
+        exclude_archived: { type: "boolean", description: "Exclude archived channels (default: true)" },
+        types: { type: "string", description: "Comma-separated channel types (e.g. 'public_channel,private_channel')" },
+        limit: { type: "number", description: "Maximum number of results to return (default: 100)" },
+        cursor: { type: "string", description: "Pagination cursor" }
       }
     }
   },
   {
     name: "conversations_members",
-    description: "Listar miembros de un canal específico de Slack (acepta ID de canal o nombre).",
+    description: "List members of a specific Slack channel (accepts channel ID or name).",
     annotations: {
       readOnlyHint: true
     },
     inputSchema: {
       type: "object",
       properties: {
-        channel: { type: "string", description: "ID o nombre del canal de Slack." },
-        limit: { type: "number", description: "Límite de miembros a retornar (por defecto 100)" },
-        cursor: { type: "string", description: "Cursor para paginar" }
+        channel: { type: "string", description: "Slack channel ID or name." },
+        limit: { type: "number", description: "Maximum number of members to return (default: 100)" },
+        cursor: { type: "string", description: "Pagination cursor" }
       },
       required: ["channel"]
     }
   },
   {
     name: "conversations_replies",
-    description: "Leer el hilo de respuestas de un mensaje padre en Slack (acepta ID de canal o nombre).",
+    description: "Read thread replies for a parent message in Slack (accepts channel ID or name).",
     annotations: {
       readOnlyHint: true
     },
     inputSchema: {
       type: "object",
       properties: {
-        channel: { type: "string", description: "ID o nombre del canal de Slack." },
-        ts: { type: "string", description: "Timestamp del mensaje padre (ej. '1234567890.123456')" },
-        limit: { type: "number", description: "Límite de respuestas a retornar" },
-        cursor: { type: "string", description: "Cursor para paginar" },
-        latest: { type: "string", description: "End timestamp para el filtro" },
-        oldest: { type: "string", description: "Start timestamp para el filtro" },
-        inclusive: { type: "boolean", description: "Si se deben incluir los límites" }
+        channel: { type: "string", description: "Slack channel ID or name." },
+        ts: { type: "string", description: "Parent message timestamp (e.g. '1234567890.123456')" },
+        limit: { type: "number", description: "Maximum number of replies to return" },
+        cursor: { type: "string", description: "Pagination cursor" },
+        latest: { type: "string", description: "End timestamp for filter" },
+        oldest: { type: "string", description: "Start timestamp for filter" },
+        inclusive: { type: "boolean", description: "Whether to include boundaries" }
       },
       required: ["channel", "ts"]
     }
   },
   {
     name: "conversations_info",
-    description: "Obtener metadatos de una conversación o canal de Slack (acepta ID de canal o nombre).",
+    description: "Get metadata for a Slack conversation or channel (accepts channel ID or name).",
     annotations: {
       readOnlyHint: true
     },
     inputSchema: {
       type: "object",
       properties: {
-        channel: { type: "string", description: "ID o nombre del canal de Slack." },
-        include_locale: { type: "boolean", description: "Incluir locale del canal" },
-        include_num_members: { type: "boolean", description: "Incluir cantidad de miembros" }
+        channel: { type: "string", description: "Slack channel ID or name." },
+        include_locale: { type: "boolean", description: "Include channel locale" },
+        include_num_members: { type: "boolean", description: "Include member count" }
       },
       required: ["channel"]
     }
   },
   {
     name: "get_channel_by_name",
-    description: "Buscar un canal por nombre y obtener toda su información y metadatos relevantes.",
+    description: "Find a channel by name and get all relevant information and metadata.",
     annotations: {
       readOnlyHint: true
     },
     inputSchema: {
       type: "object",
       properties: {
-        name: { type: "string", description: "Nombre del canal, ej. 'peya-platform-services-daimon'" }
+        name: { type: "string", description: "Channel name (e.g. 'general' or 'engineering')" }
       },
       required: ["name"]
     }
   },
   {
     name: "get_message_by_url",
-    description: "Obtener un mensaje o hilo de Slack pegando directamente su URL/enlace de Slack archives.",
+    description: "Get a Slack message or thread directly by pasting its Slack archive link/URL.",
     annotations: {
       readOnlyHint: true
     },
     inputSchema: {
       type: "object",
       properties: {
-        url: { type: "string", description: "URL del mensaje de Slack (ej: https://deliveryhero.slack.com/archives/C0BHN4GBMD2/p1786428589673259)" }
+        url: { type: "string", description: "Slack message URL (e.g. https://your-workspace.slack.com/archives/C12345678/p1234567890123456)" }
       },
       required: ["url"]
     }
   },
   {
     name: "download_file",
-    description: "Descargar un archivo o imagen privada de Slack utilizando la sesión autenticada y guardarlo localmente.",
+    description: "Download a private Slack file or image using the authenticated session and save it locally.",
     inputSchema: {
       type: "object",
       properties: {
-        url: { type: "string", description: "URL de descarga del archivo en Slack (ej: url_private_download o url_private)" },
-        local_path: { type: "string", description: "Ruta local donde guardar el archivo (ej: 'image.png')" }
+        url: { type: "string", description: "Slack file download URL (e.g. url_private_download or url_private)" },
+        local_path: { type: "string", description: "Local destination path where the file should be saved (e.g. 'image.png')" }
       },
       required: ["url", "local_path"]
     }

@@ -1,28 +1,32 @@
 # 🚀 Ultra-Lightweight Slack MCP Server (Node.js)
 
-This project is a modern, ultra-lightweight, and lightning-fast **Model Context Protocol (MCP)** server for Slack, written in Node.js (ES Modules). It is a direct, optimized port of the Kotlin `pedidosya/slack-mcp` server. 
+This project is a modern, ultra-lightweight, and lightning-fast Model Context Protocol (MCP) server for Slack, written in Node.js (ES Modules).
 
-### Why is this Node.js version superior?
-* **Instant Startup:** Bootstraps in ~10–20 milliseconds compared to several seconds for the JVM/Kotlin JAR.
-* **Pure JavaScript (Zero Native Compilations):** Uses the macOS-native `/usr/bin/sqlite3` binary directly under the hood to query cookies. This avoids having to compile heavy C++ SQLite bindings (which fail to build across Node versions).
-* **Zero-Config local authentication:** Identical to the original Kotlin version, it automatically extracts and decrypts active session cookies and tokens from Google Chrome and the Slack Desktop app. No Slack Bot/App creation or admin approvals are required!
+It provides full Slack search, conversation reading, and user metadata capabilities to LLM assistants (such as Claude Desktop and Gemini CLI) without requiring you to create an official Slack Bot, submit OAuth applications, or request administrative app installation approvals.
+
+---
+
+### Key Advantages
+* **Instant Startup:** Bootstraps in ~10–20 milliseconds (unlike heavy JVM runtimes).
+* **Pure JavaScript (Zero Native Compilations):** Uses the macOS-native /usr/bin/sqlite3 binary directly under the hood to query cookies, avoiding brittle C++ native node-gyp bindings.
+* **Zero-Config Local Authentication:** Automatically extracts and decrypts active session cookies and tokens from Google Chrome and the Slack Desktop application on macOS.
 
 ---
 
 ## 🔑 Authentication Mechanism (Zero-Config)
 
-To access Slack channels and messages as *your* active user:
-1. **Google Chrome:** Make sure you are logged into Slack on Google Chrome on the same macOS machine where you run this MCP server.
-2. **Cookies (`d`, `d-s`)**: Cookies are queried from Chrome's SQLite cookie database and decrypted using your Google Chrome Safe Storage password from the macOS Keychain.
-3. **Tokens (`xoxc-`, `xoxp-`)**: Client tokens are extracted from Chrome Local Storage or Slack Desktop's local database.
+To query Slack channels and messages seamlessly as your authenticated user:
+1. **Google Chrome:** Ensure you are logged into Slack via Google Chrome on your macOS machine.
+2. **Cookies (d, d-s):** Cookies are queried from Chrome SQLite cookie database and decrypted using your Google Chrome Safe Storage key from the macOS Keychain.
+3. **Tokens (xoxc-, xoxp-):** Tokens are extracted from Chrome Local Storage or Slack Desktop local LevelDB store.
 
-*Note: Due to Keychain secure decryption and path configurations, this zero-config extraction is optimized specifically for **macOS**.*
+*Note: Due to Keychain secure decryption and path configurations, this zero-config extraction is currently optimized for macOS.*
 
 ---
 
-## ⚙️ Configuration in Gemini CLI (`settings.json`)
+## ⚙️ Configuration in Gemini CLI (settings.json)
 
-To register this lightweight Node.js Slack MCP server in your **Gemini CLI**, add it to your `"mcpServers"` configuration block (typically under `~/.gemini/settings.json` or project-local `.gemini/settings.json`):
+To register this lightweight Node.js Slack MCP server in your Gemini CLI, add it to your mcpServers configuration block (typically under ~/.gemini/settings.json):
 
 ```json
 {
@@ -30,46 +34,47 @@ To register this lightweight Node.js Slack MCP server in your **Gemini CLI**, ad
     "slack-mcp": {
       "command": "node",
       "args": [
-        "/Users/dario.garcia/dev/gemini/peya-tmp-users-auth/index.js"
-      ]
+        "/path/to/mcp-slack/index.js"
+      ],
+      "env": {
+        "SLACK_WORKSPACE_URL": "https://your-workspace.slack.com/"
+      }
     }
   }
 }
 ```
 
-> 💡 **Custom Workspace URL:** If you want to use a different Slack workspace domain (other than the default `https://deliveryhero.slack.com/`), you can set the `SLACK_WORKSPACE_URL` environment variable:
-> ```json
->       "env": {
->         "SLACK_WORKSPACE_URL": "https://your-workspace.slack.com/"
->       }
-> ```
+> 💡 **Default Workspace URL:** If omitted, SLACK_WORKSPACE_URL falls back to https://deliveryhero.slack.com/.
 
 ---
 
-## 🛠️ Herramientas Expuestas (Tools)
+## 🛠️ Exposed MCP Tools
 
-This server exposes exactly the same 10 tools as the original Kotlin implementation:
+This server exposes 13 tools compliant with the Model Context Protocol:
 
-* **Búsquedas (Search)**:
-  * `search_messages`: Buscar mensajes en canales de Slack.
-  * `search_all`: Buscar tanto mensajes como archivos.
-* **Usuarios (Users)**:
-  * `users_list`: Listar miembros del espacio de trabajo.
-  * `users_info`: Obtener detalles y perfil de un usuario específico.
-  * `get_users_channel_sections_list`: Obtener las secciones personalizadas de la barra lateral del usuario actual (utilizando el token Grid Enterprise).
-* **Conversaciones (Conversations)**:
-  * `conversations_list`: Listar canales públicos y privados disponibles.
-  * `conversations_history`: Obtener el historial de mensajes de un canal.
-  * `conversations_replies`: Leer el hilo de respuestas de un mensaje padre.
-  * `conversations_members`: Listar miembros de un canal específico.
-  * `conversations_info`: Obtener metadatos de una conversación.
+* **Search**:
+  * search_messages: Search messages across accessible Slack channels.
+  * search_all: Search both messages and files across Slack.
+* **Users**:
+  * users_list: List workspace members.
+  * users_info: Get details and profile information for a specific Slack user.
+  * get_users_channel_sections_list: Get custom sidebar channel sections for the authenticated user.
+* **Conversations**:
+  * conversations_list: List public and private Slack channels available in the workspace.
+  * conversations_history: Get message history from a channel (accepts channel ID or plain name with or without #).
+  * conversations_replies: Read thread replies for a parent message.
+  * conversations_members: List members of a specific Slack channel.
+  * conversations_info: Get metadata for a conversation or channel.
+  * get_channel_by_name: Find a channel by name and retrieve its full metadata.
+  * get_message_by_url: Fetch a Slack message or thread directly from its archive URL.
+* **Files**:
+  * download_file: Download a private Slack file or image using the authenticated session and save it locally.
 
 ---
 
 ## 🧪 Running Tests
 
-To run the unit test suite and verify that the routing and HTTP mocks are working perfectly:
+To run the unit test suite and verify routing and mock interceptors:
 ```bash
 node test.js
 ```
-All tests complete in a few milliseconds!
