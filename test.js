@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert';
-import { executeTool, TOOLS_DEFINITIONS } from './tools.js';
+import { executeTool, TOOLS_DEFINITIONS, getActiveCredentials } from './tools.js';
+import { getSlackCredentials } from './credentials.js';
 
 test('Tools Schema and Definition Validation', () => {
   assert.equal(TOOLS_DEFINITIONS.length, 13, 'Should contain exactly 13 Slack tools.');
@@ -90,4 +91,76 @@ test('Mock executeTool - Name Resolution and URL Extraction', async () => {
   } finally {
     globalThis.fetch = originalFetch; // Restore global fetch
   }
+});
+
+test('getActiveCredentials caching and force refresh', async () => {
+  const creds1 = await getActiveCredentials();
+  assert.ok(creds1.token, 'Should have active token');
+  assert.ok(creds1.cookieD, 'Should have cookieD');
+
+  const creds2 = await getActiveCredentials();
+  assert.strictEqual(creds1, creds2, 'Repeated calls should return cached object instance');
+
+  const creds3 = await getActiveCredentials(true);
+  assert.ok(creds3.token, 'Refreshed credentials should be present');
+});
+
+test('Automatic recovery and single retry on invalid_auth with User-Agent header', async () => {
+  const originalFetch = globalThis.fetch;
+  const requests = [];
+  let attemptCount = 0;
+
+  globalThis.fetch = async (url, options) => {
+    requests.push({ url, options });
+    attemptCount++;
+    if (attemptCount === 1) {
+      // First attempt fails with invalid_auth
+      return {
+        ok: true,
+        json: async () => ({ ok: false, error: 'invalid_auth' })
+      };
+    }
+    // Second attempt (retry after refresh) succeeds
+    return {
+      ok: true,
+      json: async () => ({ ok: true, channel: { id: 'C0BHN4GBMD2' } })
+    };
+  };
+
+  try {
+    const result = await executeTool('conversations_info', { channel: 'C0BHN4GBMD2' });
+    assert.strictEqual(result.ok, true, 'Should successfully complete after auto-refresh retry');
+    assert.strictEqual(attemptCount, 2, 'Should have attempted exactly twice (1 failure + 1 retry)');
+    
+    // Verify browser User-Agent was included
+    assert.ok(requests[0].options.headers['User-Agent'], 'User-Agent header must be present');
+    assert.match(requests[0].options.headers['User-Agent'], /Mozilla/, 'User-Agent must mimic standard browser');
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test('Slack Desktop live credentials extraction and auth.test connectivity', async () => {
+  const creds = getSlackCredentials();
+  
+  assert.strictEqual(creds.source, 'slack_desktop', 'Credentials must originate primarily from Slack Desktop App');
+  assert.ok(creds.token.startsWith('xoxc-') || creds.token.startsWith('xoxp-'), 'Token must be valid xoxc or xoxp format');
+  assert.ok(creds.cookieD.startsWith('xoxd-'), 'Cookie d must start with xoxd-');
+
+  // Verify real live connectivity against Slack Web API
+  const cookieHeader = creds.cookieDS ? `d=${creds.cookieD}; d-s=${creds.cookieDS}` : `d=${creds.cookieD}`;
+  const response = await fetch('https://slack.com/api/auth.test', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${creds.token}`,
+      'Cookie': cookieHeader,
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
+    }
+  });
+
+  const body = await response.json();
+  assert.strictEqual(body.ok, true, `auth.test failed with error: ${body.error}`);
+  assert.ok(body.user, 'auth.test must return authenticated user');
+  assert.ok(body.team, 'auth.test must return authenticated team');
 });

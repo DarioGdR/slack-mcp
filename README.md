@@ -9,16 +9,18 @@ It provides full Slack search, conversation reading, and user metadata capabilit
 ### Key Advantages
 * **Instant Startup:** Bootstraps in ~10–20 milliseconds (unlike heavy JVM runtimes).
 * **Pure JavaScript (Zero Native Compilations):** Uses the macOS-native /usr/bin/sqlite3 binary directly under the hood to query cookies, avoiding brittle C++ native node-gyp bindings.
-* **Zero-Config Local Authentication:** Automatically extracts and decrypts active session cookies and tokens from Google Chrome and the Slack Desktop application on macOS.
+* **Zero-Config Local Authentication:** Automatically extracts and decrypts active session cookies and tokens, prioritizing the **Slack Desktop App (Electron)** on macOS with full fallback to **Google Chrome**.
+* **Self-Healing Session Recovery:** Dynamically resolves credentials and automatically reloads tokens upon `invalid_auth` errors without requiring server restarts.
 
 ---
 
 ## 🔑 Authentication Mechanism (Zero-Config)
 
 To query Slack channels and messages seamlessly as your authenticated user:
-1. **Google Chrome:** Ensure you are logged into Slack via Google Chrome on your macOS machine.
-2. **Cookies (d, d-s):** Cookies are queried from Chrome SQLite cookie database and decrypted using your Google Chrome Safe Storage key from the macOS Keychain.
-3. **Tokens (xoxc-, xoxp-):** Tokens are extracted from Chrome Local Storage or Slack Desktop local LevelDB store.
+1. **Slack Desktop (Primary):** Authenticates directly from your macOS Slack Desktop App session (`Slack.app`), extracting `d` cookies from the Slack container SQLite database and tokens from Slack LevelDB.
+2. **Google Chrome (Fallback):** If Slack Desktop credentials are not found, falls back completely to Google Chrome (cookies + tokens from Chrome Local Storage).
+3. **Session Coherence:** Cookies and tokens are strictly kept in sync from the same application source to eliminate `invalid_auth` session mismatches.
+4. **Auto-Recovery:** If a token expires or rotates, requests encountering `invalid_auth` automatically trigger an in-memory hot reload and single retry before reporting an error.
 
 *Note: Due to Keychain secure decryption and path configurations, this zero-config extraction is currently optimized for macOS.*
 

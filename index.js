@@ -10,18 +10,15 @@ import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
-import { getSlackCredentials } from "./credentials.js";
-import { TOOLS_DEFINITIONS, executeTool } from "./tools.js";
+import { TOOLS_DEFINITIONS, executeTool, getActiveCredentials } from "./tools.js";
 
 async function main() {
-  console.error("🔄 Loading Slack credentials...");
-  let credentials;
+  console.error("🔄 Initializing Slack MCP Server...");
   try {
-    credentials = getSlackCredentials();
+    await getActiveCredentials();
     console.error("✅ Slack credentials loaded successfully.");
   } catch (err) {
-    console.error(`❌ Failed to load credentials: ${err.message}`);
-    process.exit(1);
+    console.error(`⚠️ Notice: Credentials not yet available: ${err.message}`);
   }
 
   // Create MCP Server
@@ -44,10 +41,11 @@ async function main() {
     };
   });
 
-  // Register execution handler
+  // Register execution handler with dynamic credentials resolution
   server.setRequestHandler(CallToolRequestSchema, async (request) => {
     const { name, arguments: args } = request.params;
     try {
+      const credentials = await getActiveCredentials();
       const result = await executeTool(name, args || {}, credentials);
       return {
         content: [

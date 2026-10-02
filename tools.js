@@ -2,6 +2,8 @@
  * Slack MCP Server - Tools and API Handler Module (Upgraded)
  */
 
+import { getSlackCredentials } from './credentials.js';
+
 /**
  * List of tool definitions compliant with the Model Context Protocol schema.
  */
@@ -210,13 +212,48 @@ export const TOOLS_DEFINITIONS = [
   },
 ];
 
+// Browser User-Agent to avoid Cloudflare/Slack automated bot challenges
+const BROWSER_USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36";
+
 // Simple memory cache for resolved channel names to prevent redundant requests
 const CHANNEL_NAME_CACHE = {};
 
+// In-memory credentials cache
+let cachedCredentials = null;
+
+/**
+ * Returns active Slack credentials, caching in memory and allowing forced refresh.
+ */
+export async function getActiveCredentials(forceRefresh = false) {
+  if (!cachedCredentials || forceRefresh) {
+    cachedCredentials = getSlackCredentials();
+  }
+  return cachedCredentials;
+}
+
+/**
+ * Helper to construct standard authorization and browser headers.
+ */
+function buildHeaders(creds) {
+  const token = creds.teamToken || creds.enterpriseToken || creds.token;
+  const headers = {
+    'Authorization': `Bearer ${token}`,
+    'User-Agent': BROWSER_USER_AGENT
+  };
+  if (creds.cookieD) {
+    headers['Cookie'] = creds.cookieDS
+      ? `d=${creds.cookieD}; d-s=${creds.cookieDS}`
+      : `d=${creds.cookieD}`;
+  }
+  return headers;
+}
+
 /**
  * Executes a GET request to the Slack Web API.
+ * Automatically refreshes credentials and retries once if invalid_auth occurs.
  */
-async function slackGet(endpoint, params, credentials) {
+async function slackGet(endpoint, params, credentials, isRetry = false) {
+  const creds = credentials || await getActiveCredentials();
   const url = new URL(endpoint);
   for (const [key, val] of Object.entries(params)) {
     if (val !== undefined && val !== null) {
@@ -224,10 +261,7 @@ async function slackGet(endpoint, params, credentials) {
     }
   }
   
-  const headers = {
-    'Authorization': `Bearer ${credentials.teamToken}`,
-    'Cookie': `d=${credentials.cookieD}; d-s=${credentials.cookieDS}`
-  };
+  const headers = buildHeaders(creds);
   
   const response = await fetch(url.toString(), {
     method: 'GET',
@@ -239,20 +273,31 @@ async function slackGet(endpoint, params, credentials) {
     throw new Error(`HTTP ${response.status} from Slack: ${errorText}`);
   }
   
-  return await response.json();
+  const data = await response.json();
+  if (!isRetry && data && data.ok === false && data.error === 'invalid_auth') {
+    console.error("⚠️ [slackGet] Encountered invalid_auth, forcing credentials refresh and retrying once...");
+    try {
+      const refreshedCreds = await getActiveCredentials(true);
+      return await slackGet(endpoint, params, refreshedCreds, true);
+    } catch (refreshErr) {
+      console.error(`⚠️ [slackGet] Failed to refresh credentials: ${refreshErr.message}`);
+      return data;
+    }
+  }
+  
+  return data;
 }
 
 /**
  * Executes a POST request to the Slack Web API with urlencoded form data.
+ * Automatically refreshes credentials and retries once if invalid_auth occurs.
  */
-async function slackPostForm(endpoint, formData, credentials) {
+async function slackPostForm(endpoint, formData, credentials, isRetry = false) {
+  const creds = credentials || await getActiveCredentials();
   const url = new URL(endpoint);
   
-  const headers = {
-    'Authorization': `Bearer ${credentials.teamToken}`,
-    'Cookie': `d=${credentials.cookieD}; d-s=${credentials.cookieDS}`,
-    'Content-Type': 'application/x-www-form-urlencoded'
-  };
+  const headers = buildHeaders(creds);
+  headers['Content-Type'] = 'application/x-www-form-urlencoded';
   
   const body = new URLSearchParams();
   for (const [key, val] of Object.entries(formData)) {
@@ -272,7 +317,19 @@ async function slackPostForm(endpoint, formData, credentials) {
     throw new Error(`HTTP ${response.status} from Slack: ${errorText}`);
   }
   
-  return await response.json();
+  const data = await response.json();
+  if (!isRetry && data && data.ok === false && data.error === 'invalid_auth') {
+    console.error("⚠️ [slackPostForm] Encountered invalid_auth, forcing credentials refresh and retrying once...");
+    try {
+      const refreshedCreds = await getActiveCredentials(true);
+      return await slackPostForm(endpoint, formData, refreshedCreds, true);
+    } catch (refreshErr) {
+      console.error(`⚠️ [slackPostForm] Failed to refresh credentials: ${refreshErr.message}`);
+      return data;
+    }
+  }
+  
+  return data;
 }
 
 /**
@@ -349,13 +406,15 @@ async function resolveChannelId(input, credentials) {
  * Tool execution router. Maps MCP tool calls to actual Slack HTTP endpoints.
  */
 export async function executeTool(name, args, credentials) {
+  const creds = credentials || await getActiveCredentials();
+  
   switch (name) {
     case "search_messages":
       return await slackGet("https://slack.com/api/search.messages", {
         query: args.query,
         count: args.count,
         page: args.page
-      }, credentials);
+      }, creds);
       
     case "search_all":
       return await slackGet("https://slack.com/api/search.all", {
@@ -364,28 +423,29 @@ export async function executeTool(name, args, credentials) {
         page: args.page,
         sort: args.sort,
         sort_dir: args.sort_dir
-      }, credentials);
+      }, creds);
       
     case "users_list":
       return await slackGet("https://slack.com/api/users.list", {
         cursor: args.cursor,
         limit: args.limit,
         include_locale: args.include_locale
-      }, credentials);
+      }, creds);
       
     case "users_info":
       return await slackGet("https://slack.com/api/users.info", {
         user: args.user,
-        include_locale: args.include_locale
-      }, credentials);
+        include_locale: args.include_locale,
+        token: creds.enterpriseToken || creds.token
+      }, creds);
       
     case "get_users_channel_sections_list":
       return await slackPostForm("https://slack.com/api/users.channelSections.list", {
-        token: credentials.enterpriseToken
-      }, credentials);
+        token: creds.enterpriseToken || creds.token
+      }, creds);
       
     case "conversations_history": {
-      const channelId = await resolveChannelId(args.channel, credentials);
+      const channelId = await resolveChannelId(args.channel, creds);
       return await slackGet("https://slack.com/api/conversations.history", {
         channel: channelId,
         limit: args.limit,
@@ -393,7 +453,7 @@ export async function executeTool(name, args, credentials) {
         latest: args.latest,
         oldest: args.oldest,
         inclusive: args.inclusive
-      }, credentials);
+      }, creds);
     }
       
     case "conversations_list":
@@ -402,19 +462,19 @@ export async function executeTool(name, args, credentials) {
         types: args.types || "public_channel,private_channel",
         limit: args.limit,
         cursor: args.cursor
-      }, credentials);
+      }, creds);
       
     case "conversations_members": {
-      const channelId = await resolveChannelId(args.channel, credentials);
+      const channelId = await resolveChannelId(args.channel, creds);
       return await slackGet("https://slack.com/api/conversations.members", {
         channel: channelId,
         limit: args.limit,
         cursor: args.cursor
-      }, credentials);
+      }, creds);
     }
       
     case "conversations_replies": {
-      const channelId = await resolveChannelId(args.channel, credentials);
+      const channelId = await resolveChannelId(args.channel, creds);
       return await slackGet("https://slack.com/api/conversations.replies", {
         channel: channelId,
         ts: args.ts,
@@ -423,24 +483,24 @@ export async function executeTool(name, args, credentials) {
         latest: args.latest,
         oldest: args.oldest,
         inclusive: args.inclusive
-      }, credentials);
+      }, creds);
     }
       
     case "conversations_info": {
-      const channelId = await resolveChannelId(args.channel, credentials);
+      const channelId = await resolveChannelId(args.channel, creds);
       return await slackGet("https://slack.com/api/conversations.info", {
         channel: channelId,
         include_locale: args.include_locale,
         include_num_members: args.include_num_members
-      }, credentials);
+      }, creds);
     }
     
     case "get_channel_by_name": {
-      const channelId = await resolveChannelId(args.name, credentials);
+      const channelId = await resolveChannelId(args.name, creds);
       return await slackGet("https://slack.com/api/conversations.info", {
         channel: channelId,
         include_num_members: true
-      }, credentials);
+      }, creds);
     }
     
     case "get_message_by_url": {
@@ -464,21 +524,26 @@ export async function executeTool(name, args, credentials) {
         channel: channelId,
         ts: ts,
         limit: 100
-      }, credentials);
+      }, creds);
     }
       
     case "download_file": {
       if (!args.url || !args.local_path) {
         throw new Error("Missing required arguments: url and local_path");
       }
-      const token = credentials.enterpriseToken || credentials.teamToken;
-      const headers = {
-        "Authorization": `Bearer ${token}`
-      };
-      if (credentials.cookieD) {
-        headers["Cookie"] = `d=${credentials.cookieD}` + (credentials.cookieDS ? `; d-s=${credentials.cookieDS}` : "");
+      let downloadCreds = creds;
+      let headers = buildHeaders(downloadCreds);
+      let res = await fetch(args.url, { headers });
+      if ((res.status === 401 || res.status === 403) && !args._retried) {
+        console.error("⚠️ [download_file] Encountered auth error, attempting auto-refresh of credentials...");
+        try {
+          downloadCreds = await getActiveCredentials(true);
+          headers = buildHeaders(downloadCreds);
+          res = await fetch(args.url, { headers });
+        } catch (refreshErr) {
+          console.error(`Failed to refresh credentials for download: ${refreshErr.message}`);
+        }
       }
-      const res = await fetch(args.url, { headers });
       if (!res.ok) {
         throw new Error(`Failed to download Slack file: HTTP ${res.status} ${res.statusText}`);
       }
